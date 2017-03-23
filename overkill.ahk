@@ -273,7 +273,7 @@ SmallY2 := LargeY2 - 55
 
 ;parameters used for pixel search, ideal ColVn should be 0, meaning that EMCol is the exact color of health bar
 EMCol := 0xFF0013
-ColVn := 1
+ColVn := 0
 FoundFlag :=false
 Cnt:=0
 if(overlayActive=1){
