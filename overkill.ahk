@@ -43,7 +43,7 @@ Gui, % A_Index + 95 ":  Hide"
 guif:
 #NoEnv
 #SingleInstance force
-SkinForm(Apply, A_ScriptDir . "\USkin.dll", A_ScriptDir . "\Milikymac.msstyles")
+
 Firing := 0
 Gui Add, Text, x220 y25 w130 h30, Small Screen [F1]
 Gui Add, Text, x220 y45 w110 h30, Large Screen [F2]
@@ -86,23 +86,6 @@ Sleep -1
 Return
 
 
-#If bunny=1
-*~$Space::
-sleep 20
-loop
-{
-GetKeyState, SpaceState, Space, P
-if SpaceState = U
-break
-Sleep 1
-Send, {Blind}{Space}
-}
-Return
-#If
-Return
-Return
-
-
 sub1:
 {
 msgbox, How-to:`n`nLaunch Game. Set display mode to Borderless Windowed mode in Settings.`nSet your quality settings to Low.`n`nTo-use:`nPress F1 or F2 depending on your screen size. If you are not sure, just try them both. `nShoot an Enemy. When the Health Bar is visible, Overkill v1.4 will start to auto-aiming for about 1s when capslock is pressed.`n`n Speed: represent the moving speed of auto-aiming. If your mouse shakes badly, you should turn it down, otherwise you should turn it up.`n`n Shoot: represent the offset of the final aimming point. If you think this point on the left of the adversaries' head, increase X. If you think this point is higher than the adversaries' head, increase Y. `n`n Misc: Just explore it.
@@ -117,13 +100,7 @@ Run, https://github.com/xiaofen9/overwatch
 GuiClose:
 ExitApp
 return
-SkinForm(Param1 = "Apply", DLL = "", SkinName = ""){
-if(Param1 = Apply){
-DllCall("LoadLibrary", str, DLL)
-DllCall(DLL . "\USkinInit", Int,0, Int,0, AStr, SkinName)
-}else  if(Param1 = 0) {
-DllCall(DLL . "\USkinExit")
-}}
+
 Change1:
 MsgBox,  Applied
 Gui,Submit, Nohide
@@ -267,32 +244,11 @@ Return
 
 
 F2::
-#Persistent
 #KeyHistory, 0
 #NoEnv
-#HotKeyInterval 1
-#MaxHotkeysPerInterval 2000
-#InstallKeybdHook
-#UseHook
 #SingleInstance, Force
-SetKeyDelay,-1, 8
-SetControlDelay, -1
-SetMouseDelay, 0
-SetWinDelay,-1
-SendMode, InputThenPlay
 SetBatchLines,-1
 ListLines, Off
-CoordMode, Mouse, client
-PID := DllCall("GetCurrentProcessId")
-Process, Priority, %PID%, Normal
-ZeroX := 960
-ZeroY := 540
-CFovX := 80
-CFovY := 200
-ScanL := 660
-ScanR := 1250
-ScanT := 280
-ScanB := 610
 
 ;UI parameters
 GuiControlget, rx
@@ -305,10 +261,10 @@ GuiControlget, yrange
 GoSub saveProfile
 
 ;detection box
-LargeX1 := 0 + (A_Screenwidth * (xrange/10))
-LargeY1 := 0 + (A_Screenheight * (yrange/10))-40
-LargeX2 := A_Screenwidth - (A_Screenwidth * (xrange/10))
-LargeY2 := A_Screenheight - (A_Screenheight * (yrange / 10))-75
+LargeX1 := (A_ScreenWidth)/2 - (A_ScreenWidth)/5
+LargeY1 := (A_ScreenHeight)/2 - (A_ScreenHeight)/4
+LargeX2 := (A_ScreenWidth)/2 + (A_ScreenWidth)/5
+LargeY2 := (A_ScreenHeight)/2 + (A_ScreenHeight)/4
 SmallX1 := LargeX1 + 60
 SmallY1 := LargeY1 
 SmallX2 := LargeX2 - 60
@@ -350,64 +306,29 @@ Return
 
 
 SearchBot:
-if ( not FoundFlag ) {
+Loop,
+{
 	PixelSearch, AimPixelX, AimPixelY, LargeX1, LargeY1, LargeX2, LargeY2, EMCol, ColVn, Fast RGB
-	if ErrorLevel = 1  
-		FoundFlag := false
-	else 
-		FoundFlag := true
-}
-else {
-	PixelSearch, AimPixelX, AimPixelY, SmallX1, SmallY1, SmallX2, SmallY2, EMCol, ColVn, Fast RGB
-	;PixelSearch, AimPixelX, AimPixelY, LargeX1, LargeY1, LargeX2, LargeY2, EMCol, ColVn, Fast RGB
-	if ErrorLevel = 1
-		FoundFlag := false		
-}
+} Until ErrorLevel = 0
 Return
 
 
 
 GetAimOffset1:
 Gui,Submit, Nohide
-moveToRight := 0
+
 headX := 42+xa*3
 headY := 90+ya*5
-AimX := AimPixelX - ZeroX +headX
-AimY := AimPixelY - ZeroY +headY
-If ( AimX+4 > 0) {
-DirX := rx / 10
-moveToRight := 1
-}
-If ( AimX+4 < 0) {
-DirX := (-rx) / 10
-}
-If ( AimY+2 > 0 ) {
-DirY := rX /10 
-}
-If ( AimY+2 < 0 ) {
-DirY := (-rx) /10 
-}
-AimOffsetX := AimX * DirX
-AimOffsetY := AimY * DirY
+AimX := (AimPixelX - A_ScreenWidth/2 +headX) / (rx / 10)
+AimY := (AimPixelY - A_ScreenHeight/2 +headY) / (rx / 10)
+
 Return
 
 GetAimMoves1:
-;RootX := Ceil(AimOffsetX)
-;RootY := Ceil(AimOffsetY)
-RootX := AimOffsetX
-RootY := AimOffsetY
-if (moveToRight)
-{
-	MoveX := RootX * DirX + LtoRaddendOffset ;tested with 15 sensitivity, the addend should be larger than 1.3 when sensitivity is smaller than 15
-	;MoveX := RootX * (DirX + 0.5) 
-}
-else
-{
-	MoveX := RootX * DirX
-}
-;MoveX := RootX * DirX
-MoveY := RootY * DirY
-;GoSub DebugTool1
+If ( Abs(AimX) < 1 ) && ( Abs(AimY) < 3 )
+	Return
+MoveX := AimX
+MoveY := MoveY
 Return
 
 
